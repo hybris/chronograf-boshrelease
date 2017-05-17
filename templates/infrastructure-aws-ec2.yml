@@ -1,0 +1,44 @@
+meta:
+  # environment: (( param "please set meta environment" ))
+  dns_root: (( param "please set meta dns_root" ))
+  security_groups: (( param "please set meta security_groups" ))
+  persistent_disk: 4096
+  environment: chronograf-aws
+
+  stemcell:
+    name: bosh-aws-xen-hvm-ubuntu-trusty-go_agent
+    version: latest
+
+jobs:
+  - name: chronograf
+    networks:
+      - name: chronograf-network
+
+compilation:
+  cloud_properties:
+    instance_type: t2.2xlarge
+
+resource_pools:
+  - name: chronograf-pool
+    cloud_properties:
+      instance_type: t2.2xlarge
+
+
+networks:
+- name: chronograf-network
+  type: manual
+  subnets:
+  - range: 10.2.1.0/24
+  subnets:
+  - range: 10.244.10.4/30
+    name: chronograf
+    gateway: 10.244.10.5
+    static:
+      - 10.244.10.6
+
+
+update:
+  canaries: 1
+  max_in_flight: 1
+  canary_watch_time: 1000-60000
+  update_watch_time: 1000-60000

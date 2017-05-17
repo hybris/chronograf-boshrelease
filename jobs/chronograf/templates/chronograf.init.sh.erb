@@ -3,8 +3,21 @@
 set -x
 export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
 
+
 JOB_NAME=<%= spec.name %>
 PACKAGE_NAME=chronograf
+
+USER=vcap
+GROUP=vcap
+
+RUN_DIR=/var/vcap/sys/run/${PACKAGE_NAME}
+LOG_DIR=/var/vcap/sys/log/${PACKAGE_NAME}
+
+mkdir -p ${RUN_DIR} ${LOG_DIR}
+chown -R ${USER}:${GROUP} ${RUN_DIR} ${LOG_DIR}
+
+exec 1>> ${LOG_DIR}/${PACKAGE_NAME}.stdout.log
+exec 2>> ${LOG_DIR}/${PACKAGE_NAME}.stderr.log
 
 # Daemon name, where is the actual executable
 # If the daemon is not there, then exit.
@@ -16,23 +29,14 @@ DAEMON=/var/vcap/packages/${PACKAGE_NAME}/usr/bin/chronograf
 HOST=<%= p('chronograf.conf.host') %>
 PORT=<%= p('chronograf.conf.port') %>
 BOLTDB_PATH=<%= p('chronograf.conf.boltdb.path') %>
+BOLTDB_DIR=$(dirname ${BOLTDB_PATH})
+mkdir -p ${BOLTDB_DIR}
+chown -R ${USER}:${GROUP} ${BOLTDB_DIR}
 #CANNED_PATH=<%= p('chronograf.conf.canned') %>
 CANNED_PATH=/var/vcap/packages/${PACKAGE_NAME}/usr/share/chronograf/canned
 
 # Options to pass to the script on startup
 SCRIPT_OPTS="--host ${HOST} --port ${PORT} -b ${BOLTDB_PATH} -c ${CANNED_PATH}"
-
-USER=vcap
-GROUP=vcap
-
-RUN_DIR=/var/vcap/sys/run/${PACKAGE_NAME}
-LOG_DIR=/var/vcap/sys/log/${PACKAGE_NAME}
-mkdir -p ${RUN_DIR} ${LOG_DIR}
-chown -R vcap:vcap ${RUN_DIR} ${LOG_DIR}
-exec 1>> ${LOG_DIR}/${PACKAGE_NAME}.stdout.log
-exec 2>> ${LOG_DIR}/${PACKAGE_NAME}.stderr.log
-#exec 1>> ${LOG_DIR}/telegraf.stdout.log
-#exec 2>> ${LOG_DIR}/telegraf.stderr.log
 
 PIDFILE=$RUN_DIR/${PACKAGE_NAME}.pid
 
@@ -108,17 +112,12 @@ case $1 in
       exit # Exit
      fi
     fi
-    # Start the daemon.
-    log_daemon_msg "Starting the process" "${PACKAGE_NAME}"
     # Start the daemon with the help of start-stop-daemon
     log_success_msg "Starting the process" "${PACKAGE_NAME}"
     # Log the message appropriately
-#    if `start-stop-daemon --chuid ${GROUP}:${USER} --start --quiet --oknodo --pidfile ${PIDFILE} --exec ${DAEMON} -- -pidfile ${PIDFILE} -config $CONFIG $TELEGRAF_OPTS &`; then
-    if `start-stop-daemon --chuid ${GROUP}:${USER} --start --quiet --oknodo --pidfile ${PIDFILE} --exec ${DAEMON} -- $SCRIPT_OPTS &`; then
-     log_end_msg 0
+    if `start-stop-daemon --chuid ${GROUP}:${USER} --start -b -m --pidfile ${PIDFILE} --exec ${DAEMON} -- $SCRIPT_OPTS &`; then
      log_success_msg "$PACKAGE_NAME process was started"
     else
-     log_end_msg 1
      log_failure_msg "$PACKAGE_NAME process did not started"
     fi
   ;;
@@ -128,14 +127,12 @@ case $1 in
     if [ -e $PIDFILE ]; then
      status_of_proc -p $PIDFILE $DAEMON "$PACKAGE_NAME process" && status="0" || status="$?"
      if [ "$status" = 0 ]; then
-      start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
+      start-stop-daemon --stop -R 5 --pidfile $PIDFILE
       /bin/rm -rf $PIDFILE
       log_success_msg "$PACKAGE_NAME process was stopped"
      fi
     else
      log_daemon_msg "$PACKAGE_NAME process is not running"
-     log_end_msg 0
-     log_failure_msg "$PACKAGE_NAME process is not running"
     fi
     ;;
 
@@ -143,9 +140,8 @@ case $1 in
     # Reload the process. Basically sending some signal to a daemon to reload
     # it configurations.
     if [ -e $PIDFILE ]; then
-      start-stop-daemon --stop --signal USR1 --quiet --pidfile $PIDFILE --name $PACKAGE_NAME
+      start-stop-daemon --stop --signal USR1 --quiet --pidfile $PIDFILE --name $PACKAGE_NAME -R 5
       log_success_msg "$PACKAGE_NAME process reloaded successfully"
-      log_success_msg "$name process was reloaded"
     else
       log_failure_msg "$PIDFILE does not exists"
       log_failure_msg "$name process is not running"
@@ -163,12 +159,11 @@ case $1 in
      status_of_proc -p $PIDFILE $DAEMON "$PACKAGE_NAME process" && exit 0 || exit $?
     else
      log_daemon_msg "$PACKAGE_NAME Process is not running"
-     log_end_msg 0
     fi
   ;;
 
   version)
-      $DAEMON version
+      $DAEMON --version
       ;;
 
   *)

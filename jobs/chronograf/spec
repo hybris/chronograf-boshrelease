@@ -1,0 +1,22 @@
+---
+name: chronograf
+
+packages:
+  - chronograf
+
+templates:
+  chronograf.init.sh.erb: bin/init.sh
+
+properties:
+    chronograf.conf.host:
+      default: 0.0.0.0
+      description: "The IP that chronograf listens on (default: 0.0.0.0)."
+    chronograf.conf.port:
+      default: 8888
+      description: "The port that chronograf listens on for insecure connections (default: 8888)."
+    chronograf.conf.boltdb.path:
+      default: /var/vcap/store/chronograf/chronograf-v1.db
+      description: "The file path to the boltDB file (default: /var/lib/chronograf/chronograf-v1-.db)."
+    chronograf.conf.canned:
+      default: /usr/share/chronograf/canned
+      description: "The path to the directory for pre-created dashboards (default: /usr/share/chronograf/canned)"

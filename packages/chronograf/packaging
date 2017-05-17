@@ -1,0 +1,7 @@
+# abort script on any command that exits with a non zero value
+set -e
+
+VERSION=1.3.0
+
+echo "Extracting Chronograf ..."
+tar -xvf chronograf/chronograf-${VERSION}_linux_amd64.tar.gz --strip 2 -C ${BOSH_INSTALL_TARGET}

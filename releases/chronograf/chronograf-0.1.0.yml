@@ -1,0 +1,16 @@
+---
+packages:
+- name: chronograf
+  version: a0b996339597f41f3850ef6e7330f4458a1a2757
+  fingerprint: a0b996339597f41f3850ef6e7330f4458a1a2757
+  sha1: 5888304e0e25b19ce159f2e4be9369ea4ab22c8b
+  dependencies: []
+jobs:
+- name: chronograf
+  version: e3fc66a4fc41b51460b0649f931791576493d98b
+  fingerprint: e3fc66a4fc41b51460b0649f931791576493d98b
+  sha1: 91e245bc895f7c2bc4a122ece8b92b6808d42bfc
+commit_hash: edca1a77
+uncommitted_changes: true
+name: chronograf
+version: 0.1.0

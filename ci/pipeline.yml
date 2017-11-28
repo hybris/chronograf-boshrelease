@@ -24,17 +24,20 @@ jobs:
     - task: create-release-and-deploy
       config:
         platform: linux
-        image: {{docker-hub-task-image}}
+        image_resource:
+          type: docker-image
+          source:
+            repository: ((docker.image))
         inputs:
         - {name: chronograf-boshrelease}
         run:
           path: ./chronograf-boshrelease/ci/scripts/create_release_and_deploy.sh
           args: []
         params:
-          bosh_target: {{bosh-lite-build-target}}
-          bosh_username: {{bosh-lite-build-username}}
-          bosh_password: {{bosh-lite-build-password}}
-          bosh_deployment_name: {{bosh-lite-build-deployment-name}}
+          bosh_target: ((bosh-lite-build.target))
+          bosh_username: ((bosh-lite-build.username))
+          bosh_password: ((bosh-lite-build.password))
+          bosh_deployment_name: chronograf-warden
 
 - name: rc
   public: false
@@ -94,7 +97,10 @@ jobs:
   - task: create-final-release
     config:
       platform: linux
-      image: {{docker-hub-task-image}}
+      image_resource:
+        type: docker-image
+        source:
+          repository: ((docker.image))
       inputs:
       - {name: boshrelease, path: chronograf-boshrelease}
       - {name: version}
@@ -105,12 +111,12 @@ jobs:
         args: []
       params:
         release_name: "chronograf BOSH release"
-        bosh_target: {{bosh-lite-build-target}}
-        bosh_username: {{bosh-lite-build-username}}
-        bosh_password: {{bosh-lite-build-password}}
-        bosh_deployment_name: {{bosh-lite-build-deployment-name}}
-        aws_access_key_id: {{boshrelease-aws-access-key-id}}
-        aws_secret_access_key: {{boshrelease-aws-secret-access-key}}
+        bosh_target: ((bosh-lite-build.target))
+        bosh_username: ((bosh-lite-build.username))
+        bosh_password: ((bosh-lite-build.password))
+        bosh_deployment_name: chronograf-warden
+        aws_access_key_id: ((user-aws-concourse.aws_access_key))
+        aws_secret_access_key: ((user-aws-concourse.aws_secret_key))
         promotion_branch: master
         output_dir: ../output/chronograf-boshrelease
   - put: git-chronograf-boshrelease
@@ -136,22 +142,22 @@ resources:
   type: semver
   source:
     key: current-version
-    bucket: {{pipeline-aws-bucket}}
-    access_key_id: {{pipeline-aws-access-key-id}}
-    secret_access_key: {{pipeline-aws-secret-access-key}}
+    bucket: ((s3.pipeline-bucket))
+    access_key_id: ((user-aws-concourse-idefixoperationsprod.aws_access_key))
+    secret_access_key: ((user-aws-concourse-idefixoperationsprod.aws_secret_key))
     initial_version: 0.0.0
 
 - name: git-chronograf-boshrelease
   type: git
   source:
-    uri: {{pipeline-git-repo}}
-    branch: {{pipeline-branch}}
+    uri: ((git.uri))
+    branch: ((git.branch))
 
 - name: git-chronograf-boshrelease-release-changes
   type: git
   source:
-    uri: {{pipeline-git-repo}}
-    branch: {{pipeline-branch}}
+    uri: ((git.uri))
+    branch: ((git.branch))
     paths:
       - src/**/*
       - jobs/**/*
@@ -166,12 +172,12 @@ resources:
   source:
     user: hybris
     repository: chronograf-boshrelease
-    access_token: {{github-access-token}}
+    access_token: ((github.accessToken))
 
 - name: final-release
   type: s3
   source:
-    bucket: {{boshrelease-aws-bucket}}
+    bucket: ((s3-buckets.boshreleases))
     regexp: chronograf-boshrelease/chronograf-(.*).tgz
-    access_key_id: {{boshrelease-aws-access-key-id}}
-    secret_access_key: {{boshrelease-aws-secret-access-key}}
+    access_key_id: ((user-aws-concourse.aws_access_key))
+    secret_access_key: ((user-aws-concourse.aws_secret_key))
